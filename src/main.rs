@@ -12,56 +12,81 @@ use travel::*;
 fn main(){
     let inargs: Vec<String> = env::args().collect();
     let mut verbose = false;
-    if inargs.len() == 2{
+    if inargs.len() == 2 {
         if inargs[1].contains("-h")||inargs[1].contains("--help"){
-            println!("the way to use: {} <target dir> <Regex> \n\
+            println!("the way to use: {} <target dir> <Regex> -dx -ry (-v)\n\
                         Inorder to not be misunderstood by the shell, you are recommended to\n\
                         surround each one with \"\".\n\
                         the \"target dir\" and \"Regex\" can both be one or more \n\
                         multiple targets will increase the finding place, while the \n\
                         multiple regexes will use logic \'||\' to match the file.\n\
                         -h --help         show this help and exit \n\
-                        -v --verbose      show the file, in green, traveled during the find",inargs[0]);
+                        -dx -ry           {}; x means the number of directories, y means the number of regexes\n\
+                        -v                show the file, in green, traveled during the find",inargs[0],"CAN'T BE MISSED".red());
             process::exit(0);
         }else{
-            eprintln!("the way to use: {} <target dir> <Regex>",inargs[0]);
+            eprintln!("\nthe way to use: {} <target dir> <Regex> -dx -ry (-v)\n\
+                        try {} \"-h\"",inargs[0],inargs[0]);
             process::exit(1);
         }
-    }else if inargs.len() >= 4 {
-        if inargs[inargs.len()-1].contains("-v")||inargs[inargs.len()-1].contains("--verbose"){
+    }else if inargs.len() >= 5 {
+        if inargs[inargs.len()-1].contains("-v"){
             verbose = true;
         }
+    }else{
+        eprintln!("\nthe way to use: {} <target dir> <Regex> -dx -ry (-v)\n\
+                        try {} \"-h\"",inargs[0],inargs[0]);
+        process::exit(1);
     }
+    let mut dir_num;
+    let mut reg_num;
+    if verbose {
+        if !inargs[inargs.len() - 2].contains("-r") || !inargs[inargs.len() - 3].contains("-d") {
+            eprintln!("\nthe way to use: {} <target dir> <Regex> -dx -ry (-v)\n\
+                        try {} \"-h\"",inargs[0],inargs[0]);
+            process::exit(1);
+        }
+        dir_num = inargs[inargs.len()-3][2..].parse::<u32>().unwrap();
+        reg_num = inargs[inargs.len()-2][2..].parse::<u32>().unwrap();
+    }else{
+        if !inargs[inargs.len() - 1].contains("-r") || !inargs[inargs.len() - 2].contains("-d") {
+            eprintln!("\nthe way to use: {} <target dir> <Regex> -dx -ry (-v)\n\
+                        try {} \"-h\"",inargs[0],inargs[0]);
+            process::exit(1);
+        }
+        dir_num = inargs[inargs.len()-2][2..].parse::<u32>().unwrap();
+        reg_num = inargs[inargs.len()-1][2..].parse::<u32>().unwrap();
+    }
+
+    
 
     let mut arg_cnt=1;
     let mut root_vec=Vec::new();
-    while arg_cnt < inargs.len(){
+    while arg_cnt < inargs.len()&&dir_num > 0{
+        dir_num -=1;
         let cur_root = Path::new(&inargs[arg_cnt]);
         if cur_root.is_dir(){
             root_vec.push(&inargs[arg_cnt]);
             arg_cnt += 1;
         }else{
-            break;
+            eprintln!("An {}: {}","non-existent directory".red(), inargs[arg_cnt]);
+            process::exit(1);
         }
     }
     let mut regex_vec = Vec::new();
-    while arg_cnt < inargs.len(){
+    while arg_cnt < inargs.len()&&reg_num > 0{
+        reg_num -= 1;
         match Regex::new(&inargs[arg_cnt]){
             Ok(re) => {
                 regex_vec.push(re);
                 arg_cnt += 1;
             },
-            Err(e) => {//#the invalid one and end can be blurred
-                if regex_vec.is_empty() {
-                    eprintln!("An {} occurred : {}","error".red(),e);
-                    process::exit(1);
-                }else{
-                    break;
-                }
+            Err(e) => {//
+                eprintln!("An {} occurred : {}","error".red(),e);
+                process::exit(1);
             }
         }
     }
-    
     // let pattern = &inargs[2];//borrow the Regex pattern
     // let regex = match Regex::new(pattern){
     //     Ok(re) => re,
@@ -77,7 +102,7 @@ fn main(){
             if files.is_empty(){
                 println!("\n{}","No files found.".yellow());
             }else{
-                println!("\n{}\n {},{}\n","Those files were found:".yellow(),".rs file is blue".blue(),"others is white");
+                println!("\n{}\n {}, others is white\n","Those files were found:".yellow(),".rs file is blue".blue());
                 for file in files{
                     if file.contains(".rs"){
                         println!("{}",file.blue());
